@@ -1,14 +1,58 @@
 from flask import (Flask, render_template, jsonify, request, flash, redirect, session)
 import mysql.connector
 import os
+from flask_cors import CORS
+
 
 #create the app
 app = Flask(__name__, template_folder="templates")
+CORS(app)
+
+app.config["IMAGE_UPLOADS"] = "./static/pics"
+
 
 @app.route('/', methods=['GET'])
 def home():
     return render_template('home.html')
     #return "hello world"
+
+
+# adding users to database with python
+@app.route('/newuser', methods=['GET', 'POST'])
+def newuser():
+    return render_template('newUser.html', methods=['GET', 'POST'])
+    #return "working"
+
+@app.route('/adduser', methods=['GET', 'POST'])
+def adduser():
+
+    if request.method == "POST":
+        if request.files:
+            firstName = request.form["firstName"]
+            lastName = request.form["lastName"]
+            image = request.files["image"]
+
+            userList = []
+            params = {
+                "first_name": firstName,
+                "last_name": lastName,
+                "image": image.filename
+            }
+
+            image.save(os.path.join(app.config["IMAGE_UPLOADS"], image.filename))
+            print(image.filename + firstName)
+
+            cnx = mysql.connector.connect(user="root", password="snowboarding", host="127.0.0.1", database="points_tracker")
+            mycursor = cnx.cursor()
+
+            insertStatement = ('INSERT INTO points_tracker.users (FirstName, LastName, Picture) VALUES (%s, %s, %s)')
+            insertData = (firstName, lastName, image.filename)
+            mycursor.execute(insertStatement, insertData)
+            cnx.commit()
+
+            userList.append(params)
+            return jsonify(userList)
+
 
 
 @app.route('/users', methods=['GET'])
